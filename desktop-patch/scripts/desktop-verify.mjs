@@ -33,13 +33,15 @@ try {
   const baseline = JSON.parse(baselineText)
   add(
     'Real upstream baseline schema',
-    baseline.schema === 3 &&
+    // 注意：这里的哈希是 UPSTREAM_BASELINE.json 之外的第二份独立副本（纵深防御）。
+    // 更新 baseline 时必须同步更新这里，否则本项检查会失败。
+    baseline.schema === 4 &&
       baseline.exactFiles?.['package.json'] === '0f491ba06e7efc3498ae15ef1ef7a78219cfbda7f7a4ce0db3a72452545ff590' &&
       baseline.exactFiles?.['vite.config.ts'] === '79c0fc8e715eba7349b7406d2b6d501df161fa4c19dfb9799cf5a247be5f951b' &&
-      baseline.exactFiles?.['src/App.tsx'] === '0f66bd665385f9293becae326a79f5aa191bca4cab3031b08650d9755545b42d' &&
-      baseline.exactFiles?.['src/components/ProjectsPage.tsx'] === 'b484e80bd75b379f6d93121fd485a5d3febb543528eb7b27a5cef1985387492f' &&
-      baseline.exactFiles?.['src/lib/project-file.ts'] === 'f55fe1f0d3bc7cf7349f924afcde8890d8daa6de4bd421cf55dbc7428d6a39b8' &&
-      baseline.exactFiles?.['src/styles.css'] === '11574a5b77169f66ca106c45611d41624e0b03b6a2086756166b30a095d5d785' &&
+      baseline.exactFiles?.['src/App.tsx'] === 'e14187370ce0c5a5c1674f0c43be5674a35e309f2a6bd794563c7757a9f1dc8d' &&
+      baseline.exactFiles?.['src/components/ProjectsPage.tsx'] === '4882db2206d72b52b3435ab36579c9f175cc6a944cb3eb3df568a026d06236cc' &&
+      baseline.exactFiles?.['src/lib/project-file.ts'] === '0d7eaccdd0568ecee7b04340185fef9d2c9c364cdd445629e47a24b8748c14c7' &&
+      baseline.exactFiles?.['src/styles.css'] === 'dabb4284bd78d5003792715dc417334266bf3eb6ecc95c1fabf7e838c3102937' &&
       Object.keys(baseline.exactFiles ?? {}).length === 6 &&
       Object.keys(baseline.guardedFiles ?? {}).length === 0,
     baseline.sourceRef ?? 'missing',
@@ -203,7 +205,11 @@ try {
   )
   requireIncludes(
     'src/lib/project-file.ts',
-    ["mtime: new Date('1980-01-01T00:00:00Z')"],
+    // C-1：必须是本地时间字面量（无 Z）。
+    // fflate 的 wzh() 用 getFullYear() 等本地时间 getter，若写成 UTC 的
+    // '...T00:00:00Z'，在 UTC 以西所有时区都会落到 1979 → y<0 → err(10)
+    // invalid zip date，导致每一次保存都抛错。结尾的 ') 保证不会误配 Z 版本。
+    ["mtime: new Date('1980-01-01T00:00:00')"],
     'Deterministic figgrid bundle',
   )
 } catch (error) {
