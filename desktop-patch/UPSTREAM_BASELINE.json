@@ -1,0 +1,22 @@
+{
+  "schema": 4,
+  "repository": "https://github.com/Resky0/layout-assistant",
+  "version": "0.6.0",
+  "commit": null,
+  "tree": null,
+  "sourceRef": "首次成功构建后，把 CI 打印的 commit/tree 填入上面两个字段即可锁定",
+  "strategy": "commit 已填时严格验证该 commit 的整树 hash 与下列文件；未填时自举解析并记录",
+  "exactFiles": {
+    "package.json": "0f491ba06e7efc3498ae15ef1ef7a78219cfbda7f7a4ce0db3a72452545ff590",
+    "vite.config.ts": "79c0fc8e715eba7349b7406d2b6d501df161fa4c19dfb9799cf5a247be5f951b",
+    "src/App.tsx": "e14187370ce0c5a5c1674f0c43be5674a35e309f2a6bd794563c7757a9f1dc8d",
+    "src/components/ProjectsPage.tsx": "4882db2206d72b52b3435ab36579c9f175cc6a944cb3eb3df568a026d06236cc",
+    "src/lib/project-file.ts": "0d7eaccdd0568ecee7b04340185fef9d2c9c364cdd445629e47a24b8748c14c7",
+    "src/styles.css": "dabb4284bd78d5003792715dc417334266bf3eb6ecc95c1fabf7e838c3102937"
+  },
+  "guardedFiles": {},
+  "notes": [
+    "哈希由真实 commit 的文件内容计算，可用 git show <commit>:<path> | sha256sum 复现。",
+    "构建流程 checkout 固定 commit，不再在历史中搜索。"
+  ]
+}

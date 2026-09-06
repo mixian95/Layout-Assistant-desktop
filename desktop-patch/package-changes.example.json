@@ -1,0 +1,19 @@
+{
+  "scripts": {
+    "tauri": "tauri",
+    "desktop:dev": "tauri dev",
+    "desktop:build": "tauri build",
+    "desktop:doctor": "node scripts/desktop-doctor.mjs",
+    "desktop:verify": "node scripts/desktop-verify.mjs",
+    "desktop:lock": "node scripts/desktop-lock.mjs",
+    "desktop:lock:check": "node scripts/desktop-lock-check.mjs",
+    "desktop:test:rust": "cargo test --manifest-path src-tauri/Cargo.toml --locked --lib",
+    "desktop:build:windows": "npm run desktop:doctor && npm run desktop:verify && npm run desktop:lock:check && npm ci && npm run desktop:test:rust && tauri build --bundles nsis && node scripts/desktop-verify-build.mjs"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "2.11.1"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "2.11.4"
+  }
+}
