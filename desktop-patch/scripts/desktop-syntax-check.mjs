@@ -83,6 +83,34 @@ if (ts) {
   }
 }
 
+// ---- 第三道：真实类型检查 ----
+// 解析器只看语法。像"'tif' 不能赋给 'png' | 'svg'"或"导入了却没用"
+// 这类问题只有类型检查才抓得到，而它们同样会让构建整个失败。
+if (ts && existsSync(join(repoDir, 'node_modules', 'typescript'))) {
+  const configPath = ['tsconfig.app.json', 'tsconfig.json']
+    .map((name) => join(repoDir, name))
+    .find((candidate) => existsSync(candidate))
+  if (configPath) {
+    const parsed = ts.parseJsonConfigFileContent(
+      ts.readConfigFile(configPath, ts.sys.readFile).config,
+      ts.sys,
+      repoDir,
+    )
+    const program = ts.createProgram(parsed.fileNames, {
+      ...parsed.options,
+      noEmit: true,
+    })
+    const diagnostics = ts
+      .getPreEmitDiagnostics(program)
+      .filter((item) => item.file && !item.file.fileName.includes('node_modules'))
+    for (const item of diagnostics.slice(0, 20)) {
+      const { line } = item.file.getLineAndCharacterOfPosition(item.start ?? 0)
+      const relative = item.file.fileName.replace(`${repoDir}/`, '')
+      fail(relative, `第 ${line + 1} 行 ${ts.flattenDiagnosticMessageText(item.messageText, ' ')}`)
+    }
+  }
+}
+
 if (failures) {
   console.error(`\n补丁后语法检查失败：${failures} 处。`)
   process.exit(1)

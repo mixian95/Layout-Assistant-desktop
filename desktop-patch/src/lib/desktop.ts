@@ -195,7 +195,7 @@ export async function desktopTakeLaunchFile(): Promise<DesktopPickedProject | nu
 
 export async function desktopSaveExport(options: {
   fileName: string
-  extension: 'png' | 'svg'
+  extension: 'png' | 'svg' | 'tif' | 'pptx'
   blob: Blob | Uint8Array
 }): Promise<DesktopSaveResult> {
   const bytes = await rawBytes(options.blob)

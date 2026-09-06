@@ -449,7 +449,7 @@ app = replaceOnce(
 app = replaceOnce(
   app,
   "import { createPngBlob, createSvgBlob, downloadBlob } from './lib/export'\n",
-  "import { createPngBlob, createSvgBlob, downloadBlob } from './lib/export'\nimport {\n  createPngBlobWithDpi,\n  createTiffBlob,\n} from './lib/export-formats'\nimport { DEFAULT_DPI, clampDpi } from './lib/journal-presets'\n",
+  "import { createSvgBlob, downloadBlob } from './lib/export'\nimport {\n  createPngBlobWithDpi,\n  createTiffBlob,\n} from './lib/export-formats'\nimport { DEFAULT_DPI, clampDpi } from './lib/journal-presets'\n",
   'App.tsx export-formats import',
 )
 app = replaceOnce(
@@ -585,7 +585,7 @@ app = replaceOnce(
       className="app-shell"
       onDragOver={(event) => {
         if (
-          Array.from(event.dataTransfer.items).some(
+          Array.from<DataTransferItem>(event.dataTransfer.items).some(
             (item) => item.kind === 'file',
           )
         ) {
@@ -593,7 +593,7 @@ app = replaceOnce(
         }
       }}
       onDrop={(event) => {
-        const file = Array.from(event.dataTransfer.files).find((item) =>
+        const file = Array.from<File>(event.dataTransfer.files).find((item) =>
           item.name.toLowerCase().endsWith('.figgrid'),
         )
         // 只拦截 .figgrid；图片仍旧交给左侧素材面板自己的 drop 处理
