@@ -2,12 +2,13 @@
 0ff9c37c077b1baef15d2fa2ed3e5ef13c288595486022b2278dc0202d934aea  ./LOCKFILE_STATUS.md
 bc3172356bd898dd1d4daed1ca8384ee1bd33aa3fcc36f80a214f8b781c6a030  ./UPSTREAM_BASELINE.json
 62979e3a55fc1845d25fe836a0c67d8e02b519c7789813632b68fe6fe7f7249f  ./WINDOWS_VALIDATION.md
-427ca3371bbdcd0aafdf930087d979559a1cb4a81dac69d2e2a64045f8dbe43c  ./apply-desktop.mjs
-a3eb229ee3a68380df4fc84068021cd9797f479b5316c378a0c6a424912346cf  ./package-changes.example.json
+043606de9934145c9b674fe5fb09696fcedfaf9d86f82f27d4aacb2fca9c9d44  ./apply-desktop.mjs
+8f776aee771774a51552434df06082a8382a0457a1826505a0bc1106c5d52c5c  ./package-changes.example.json
 b65791647f69fbf961d62391704998e83cb812cd438629b7a136a68021161dd0  ./scripts/desktop-doctor.mjs
 516dead67ab232ce59a2685d031f8ead33b35a7b5a5fc2120dccdda8bbbcde9f  ./scripts/desktop-lock-check.mjs
 ad74595fd02798779b3293aa0565cbaa96e6f91de64cc62e54d1cc93422cfa50  ./scripts/desktop-lock.mjs
 a58f92416faf57f42546b39f696b6aa8a85a7e30c734bdf32dfadb5837103324  ./scripts/desktop-make-icons.mjs
+76c0780e994cb9d973ae4f64cccf754e117fcd831039b629041f753b3439d51c  ./scripts/desktop-portable-fixup.mjs
 8ca7196301eb7a7abafc49030db03e5dd94622d8d216bb168db73a9bbb81e55b  ./scripts/desktop-syntax-check.mjs
 2c1d321c54e6a97ed0b09277bc11421d4a2046ae9d0ab7b0583d4e4eeb569c09  ./scripts/desktop-verify-build.mjs
 322d09982fbcbb42c2ee488cd8c8dcff744d94c9da706889577143943f6d32e6  ./scripts/desktop-verify.mjs
@@ -26,4 +27,7 @@ a5e1857f5a088d53e0a6da06e0b1ae5311e2edfe8cf0704c602d4b24f5d24bd6  ./src/lib/expo
 135b39d2ccf9b562d5ac9a31a54f24dd679389de6cb4e7fbb52ac52f2b39abe5  ./src/lib/journal-presets.ts
 0889c0754b13fc4c7886544d0aa26724b874f425c2a943ea1d6013eb1a4f7879  ./src/lib/pptx.ts
 d8d8a785e1a6cb90f7b5ef74083934321dc3c835ed6a12885c5b708d86c687b4  ./src/lib/raster-format.ts
+576c7909e47d44b21d93701a6fe643997b270179b0fb321c2e3941f93c6ade6d  ./src/lib/storage-memory.ts
 1bc749c46320872d288a4ab50705ed726331dd721d3722233e12fbf97d80c35b  ./vite.config.desktop.ts
+57efaf3f257a50ac61415345d8ca9ff9e77852969e1c59eb1d121f93fd842a0a  ./vite.config.portable.ts
+726d3bc35a0566a567154c49b0df890d30d78b217213b7d31cebc8ac1701c0b5  ./使用说明.md
