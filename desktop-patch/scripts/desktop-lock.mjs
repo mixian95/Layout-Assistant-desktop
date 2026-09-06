@@ -4,12 +4,21 @@ import { spawnSync } from 'node:child_process'
 import { join } from 'node:path'
 
 const root = process.cwd()
-const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm'
-const npmResult = spawnSync(
-  npmCommand,
-  ['install', '--package-lock-only', '--ignore-scripts'],
-  { stdio: 'inherit', cwd: root },
-)
+// Node >= 18.20.2（CVE-2024-27980）在 Windows 上拒绝直接 spawn .cmd，
+// 必须显式走 shell；参数均为字面量，无注入面。
+const npmExecpath = process.env.npm_execpath
+const useNodeEntry = npmExecpath && npmExecpath.endsWith('.js')
+const npmResult = useNodeEntry
+  ? spawnSync(
+      process.execPath,
+      [npmExecpath, 'install', '--package-lock-only', '--ignore-scripts'],
+      { stdio: 'inherit', cwd: root },
+    )
+  : spawnSync(
+      process.platform === 'win32' ? 'npm.cmd' : 'npm',
+      ['install', '--package-lock-only', '--ignore-scripts'],
+      { stdio: 'inherit', cwd: root, shell: process.platform === 'win32' },
+    )
 if (npmResult.error) {
   console.error(`无法运行 npm：${npmResult.error.message}`)
   process.exit(1)

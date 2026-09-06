@@ -12,16 +12,33 @@ import { tmpdir } from 'node:os'
 
 const checks = []
 
-function run(command, args = []) {
+function run(command, args = [], extra = {}) {
   try {
     return execFileSync(command, args, {
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],
       windowsHide: true,
+      ...extra,
     }).trim()
   } catch {
     return null
   }
+}
+
+// Node >= 18.20.2 / 20.12.2 起（CVE-2024-27980）在 Windows 上拒绝直接
+// spawn .cmd/.bat，execFileSync('npm.cmd') 会抛 EINVAL。
+// 优先用 npm 自己通过 npm_execpath 暴露的 JS 入口（完全不经过 shell）；
+// 独立运行时退回 shell 模式。
+function detectNpm() {
+  const execpath = process.env.npm_execpath
+  if (execpath && execpath.endsWith('.js')) {
+    const viaNode = run(process.execPath, [execpath, '--version'])
+    if (viaNode) return viaNode
+  }
+  if (process.platform === 'win32') {
+    return run('npm.cmd', ['--version'], { shell: true })
+  }
+  return run('npm', ['--version'])
 }
 
 function add(name, ok, detail, required = true) {
@@ -31,7 +48,7 @@ function add(name, ok, detail, required = true) {
 const nodeMajor = Number(process.versions.node.split('.')[0])
 add('Node.js', nodeMajor >= 20, `${process.version}${nodeMajor >= 20 ? '' : '；建议 Node.js 20+'}`)
 
-const npmVersion = run(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['--version'])
+const npmVersion = detectNpm()
 add('npm', Boolean(npmVersion), npmVersion ?? '未找到 npm')
 
 const rustc = run('rustc', ['--version'])

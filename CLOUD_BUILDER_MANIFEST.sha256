@@ -4,14 +4,14 @@ a443b2de9f0eee520b7abd6fcf7ac401835bbe27120a0235e111e670b63f9976  ./.gitignore
 7d0bf22fbbda541e81e93236676fe39ed1e5d4f844fe1afac7f86ec1bb85cca5  ./cloud/find-upstream-baseline.mjs
 4e991f1acdcd875211d1ff4f9a0e20006d45188e17800e2772a6d1f31fabfb45  ./desktop-patch/DESKTOP_SETUP.md
 0ff9c37c077b1baef15d2fa2ed3e5ef13c288595486022b2278dc0202d934aea  ./desktop-patch/LOCKFILE_STATUS.md
-8160b4d8166850c1282959e611186194fc01859d1a59437cd103859db6d8c0df  ./desktop-patch/PATCH_MANIFEST.sha256
+d88b06358a025ae274e204885f159fc24632605cb1974082c8fffd5f1fdac3a2  ./desktop-patch/PATCH_MANIFEST.sha256
 bc3172356bd898dd1d4daed1ca8384ee1bd33aa3fcc36f80a214f8b781c6a030  ./desktop-patch/UPSTREAM_BASELINE.json
 62979e3a55fc1845d25fe836a0c67d8e02b519c7789813632b68fe6fe7f7249f  ./desktop-patch/WINDOWS_VALIDATION.md
 ad5d7e98b705f70504502a254a66225aee22e82dae2a87c2ff8b38d0eddb5035  ./desktop-patch/apply-desktop.mjs
 10c7395c71e897e0fc75a5ce42e796ece17b174e52c70e1b7be55f77a475dcdf  ./desktop-patch/package-changes.example.json
-1c2e7dac2e433d071835a712a918b3301d05a9410e1c86fbc5ccb7c65cc419c8  ./desktop-patch/scripts/desktop-doctor.mjs
+b65791647f69fbf961d62391704998e83cb812cd438629b7a136a68021161dd0  ./desktop-patch/scripts/desktop-doctor.mjs
 516dead67ab232ce59a2685d031f8ead33b35a7b5a5fc2120dccdda8bbbcde9f  ./desktop-patch/scripts/desktop-lock-check.mjs
-4c02aaffa499069b55d4af271731a983ffb87022716d6e803ef972edce1529c1  ./desktop-patch/scripts/desktop-lock.mjs
+ad74595fd02798779b3293aa0565cbaa96e6f91de64cc62e54d1cc93422cfa50  ./desktop-patch/scripts/desktop-lock.mjs
 2c1d321c54e6a97ed0b09277bc11421d4a2046ae9d0ab7b0583d4e4eeb569c09  ./desktop-patch/scripts/desktop-verify-build.mjs
 8bae24758c8408b73f6957fab7b36cb8b79f899f8e8055de90d009f9eb45da48  ./desktop-patch/scripts/desktop-verify.mjs
 e281afc63b4d215d88535ea31c36d622897e385faa23d46e64e65f149eef46d6  ./desktop-patch/src-tauri/Cargo.toml
