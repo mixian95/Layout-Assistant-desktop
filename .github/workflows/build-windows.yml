@@ -1,0 +1,154 @@
+name: Build Windows Installer
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: layout-assistant-windows-build
+  cancel-in-progress: false
+
+jobs:
+  build-windows:
+    name: Build verified Windows installer
+    runs-on: windows-latest
+    timeout-minutes: 60
+
+    steps:
+      # TODO(H-2): 下面四个 action 目前仍用可变 tag（@v4 / @stable）。
+      # 上一次运行已经出现过 Node 20 → 24 的静默漂移。
+      # 首次绿灯后建议全部 pin 到 40 位 commit SHA。
+      - name: Checkout cloud builder
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'      # Node 20 已 EOL
+
+      - name: Set up Rust (MSVC)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: x86_64-pc-windows-msvc
+
+      # --no-single-branch：严格模式下固定的 commit 可能不在默认分支上，必须保证可达
+      # core.autocrlf=false：Windows runner 默认会把 LF 转成 CRLF，导致
+      #   (1) 磁盘文件哈希与 git blob 不符，baseline 校验失败
+      #   (2) 补丁锚点里的 \n 全部匹配不上
+      # 必须关闭，否则整个补丁流程在 Windows 上无法工作。
+      - name: Clone Layout Assistant upstream
+        shell: pwsh
+        run: >
+          git clone --no-single-branch
+          --config core.autocrlf=false
+          --config core.eol=lf
+          https://github.com/Resky0/layout-assistant.git app
+
+      - name: Verify upstream source pin
+        shell: pwsh
+        run: node .\cloud\find-upstream-baseline.mjs .\app .\desktop-patch\UPSTREAM_BASELINE.json
+
+      - name: Apply Phase 7 desktop patch
+        shell: pwsh
+        run: node .\desktop-patch\apply-desktop.mjs .\app
+
+      - name: Check Windows build environment
+        working-directory: app
+        shell: pwsh
+        run: npm run desktop:doctor
+
+      # TODO(H-3): 首次绿灯后，把产物里的 package-lock.json / Cargo.lock /
+      # desktop-lockfiles.sha256.json 提交进本仓库，然后删除下面这一步。
+      # 只要 desktop:lock 和 desktop:lock:check 在同一次运行里，后者恒真。
+      - name: Generate and seal lockfiles
+        working-directory: app
+        shell: pwsh
+        run: npm run desktop:lock
+
+      - name: Verify lockfiles
+        working-directory: app
+        shell: pwsh
+        run: npm run desktop:lock:check
+
+      - name: Install exact npm dependencies
+        working-directory: app
+        shell: pwsh
+        run: npm ci
+
+      - name: Static verification
+        working-directory: app
+        shell: pwsh
+        run: npm run desktop:verify
+
+      # runner 默认 UTC。C-1（ZIP mtime 越界）只在 UTC 以西才触发，
+      # 所以必须至少跑一次负偏移时区，否则这一类 bug 永远抓不到。
+      - name: Run frontend unit tests (UTC)
+        working-directory: app
+        shell: pwsh
+        run: npm test
+        env:
+          TZ: UTC
+
+      - name: Run frontend unit tests (America/Los_Angeles)
+        working-directory: app
+        shell: pwsh
+        run: npm test
+        env:
+          TZ: America/Los_Angeles
+
+      - name: Run Rust unit tests
+        working-directory: app
+        shell: pwsh
+        run: npm run desktop:test:rust
+
+      - name: Build frontend
+        working-directory: app
+        shell: pwsh
+        run: npm run build
+
+      - name: Build NSIS installer
+        working-directory: app
+        shell: pwsh
+        run: npx tauri build --bundles nsis
+
+      - name: Verify installer output
+        working-directory: app
+        shell: pwsh
+        run: node scripts/desktop-verify-build.mjs
+
+      - name: Write installer SHA-256 file
+        shell: pwsh
+        run: |
+          $installers = Get-ChildItem -Path .\app\src-tauri\target\release\bundle\nsis\*.exe
+          if (-not $installers) { throw "NSIS installer not found" }
+          foreach ($installer in $installers) {
+            $hash = (Get-FileHash -Algorithm SHA256 $installer.FullName).Hash.ToLowerInvariant()
+            "$hash  $($installer.Name)" | Set-Content -Encoding ascii "$($installer.FullName).sha256"
+          }
+
+      - name: Show upstream pin for follow-up
+        if: always()
+        shell: pwsh
+        run: |
+          if (Test-Path .\resolved-upstream.json) {
+            Write-Host "=== 本次实际使用的上游快照 ==="
+            Get-Content .\resolved-upstream.json
+          }
+
+      - name: Upload Windows installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: Layout-Assistant-Windows
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            app/src-tauri/target/release/bundle/nsis/*.exe
+            app/src-tauri/target/release/bundle/nsis/*.exe.sha256
+            app/package-lock.json
+            app/src-tauri/Cargo.lock
+            app/desktop-lockfiles.sha256.json
+            app/desktop-baseline.json
+            resolved-upstream.json
