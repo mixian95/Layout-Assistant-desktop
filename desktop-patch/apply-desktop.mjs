@@ -2,6 +2,7 @@ import { access, cp, mkdir, readFile, writeFile } from 'node:fs/promises'
 import { createHash } from 'node:crypto'
 import { execFileSync } from 'node:child_process'
 import { dirname, join, resolve } from 'node:path'
+import { pathToFileURL } from 'node:url'
 import { fileURLToPath } from 'node:url'
 
 const patchDir = dirname(fileURLToPath(import.meta.url))
@@ -158,6 +159,7 @@ for (const relative of [
   'scripts/desktop-verify-build.mjs',
   'scripts/desktop-lock.mjs',
   'scripts/desktop-lock-check.mjs',
+  'scripts/desktop-make-icons.mjs',
 ]) {
   const target = join(repoDir, relative)
   await mkdir(dirname(target), { recursive: true })
@@ -350,6 +352,16 @@ const desktopStyles = `\n/* Desktop-only recent disk files */\n.desktop-recents 
 if (!styles.includes('/* Desktop-only recent disk files */')) styles += desktopStyles
 else if (!styles.includes('.desktop-recovery {')) styles += desktopStyles.slice(desktopStyles.indexOf('\n.desktop-recovery {'))
 await writeFile(stylesPath, styles)
+
+// Windows 打包必须有 icons/icon.ico，否则 tauri-build 直接失败。
+// 图标全部由代码生成，仓库中不保存任何二进制资源。
+{
+  const { generateIcons } = await import(
+    pathToFileURL(join(repoDir, 'scripts', 'desktop-make-icons.mjs')).href
+  )
+  const written = generateIcons(join(repoDir, 'src-tauri', 'icons'))
+  if (written.length) console.log(`Generated app icons: ${written.join(', ')}`)
+}
 
 console.log('Desktop phase-7 cumulative patch applied.')
 console.log('Next: npm run desktop:lock')
