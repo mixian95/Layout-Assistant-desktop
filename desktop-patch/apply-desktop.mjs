@@ -219,10 +219,13 @@ if (!app.includes('projectUpdatedAt: project.updatedAt')) {
     'App.tsx save project revision',
   )
 }
+// 注意：`try { await folderBackup.backupNow()` 在 App.tsx 里出现 4 次
+// （exportPng / exportSvg / saveProjectFile ×2），必须用函数签名把锚点唯一化，
+// 否则声明会被插进 exportPng，导致 saveProjectFile 里 TS2304 找不到该变量。
 app = replaceOnce(
   app,
-  "    try {\n      await folderBackup.backupNow()\n",
-  "    try {\n      const desktopRevision = isDesktopApp() ? desktopProjectRevision(project) : null\n      await folderBackup.backupNow()\n",
+  "  const saveProjectFile = async () => {\n    setBusyAction('project')\n    try {\n      await folderBackup.backupNow()\n",
+  "  const saveProjectFile = async () => {\n    setBusyAction('project')\n    try {\n      const desktopRevision = isDesktopApp() ? desktopProjectRevision(project) : null\n      await folderBackup.backupNow()\n",
   'App.tsx capture desktop revision before async work',
 )
 app = replaceOnce(
