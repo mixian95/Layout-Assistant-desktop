@@ -204,6 +204,37 @@ try {
     'Release lockfile verification',
   )
   requireIncludes(
+    'src/lib/raster-format.ts',
+    ['export function setPngDpi', 'export function encodeTiff'],
+    'DPI and TIFF encoders',
+  )
+  requireIncludes(
+    'src/lib/pptx.ts',
+    ['export function buildPptxParts', 'p:sldSz', 'a:srcRect'],
+    'PPTX generator',
+  )
+  requireIncludes(
+    'src/lib/export-pptx.ts',
+    ['export async function createPptxBlob', "mtime: new Date('1980-01-01T00:00:00')"],
+    'PPTX export wiring',
+  )
+  requireIncludes(
+    'src/lib/journal-presets.ts',
+    ['JOURNAL_PRESETS', 'mmToPixels'],
+    'Journal size presets',
+  )
+  requireIncludes(
+    'src-tauri/src/lib.rs',
+    ['fn desktop_take_launch_file', 'fn figgrid_from_args'],
+    'Figgrid file association handling',
+  )
+  requireIncludes(
+    'src-tauri/tauri.conf.json',
+    ['fileAssociations', '"figgrid"'],
+    'Figgrid file association registered',
+  )
+  requireIncludes(
+
     'src/lib/project-file.ts',
     // C-1：必须是本地时间字面量（无 Z）。
     // fflate 的 wzh() 用 getFullYear() 等本地时间 getter，若写成 UTC 的

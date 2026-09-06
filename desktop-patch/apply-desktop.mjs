@@ -160,6 +160,11 @@ for (const relative of [
   'scripts/desktop-lock.mjs',
   'scripts/desktop-lock-check.mjs',
   'scripts/desktop-make-icons.mjs',
+  'src/lib/journal-presets.ts',
+  'src/lib/raster-format.ts',
+  'src/lib/export-formats.ts',
+  'src/lib/pptx.ts',
+  'src/lib/export-pptx.ts',
 ]) {
   const target = join(repoDir, relative)
   await mkdir(dirname(target), { recursive: true })
@@ -289,6 +294,420 @@ app = replaceOnce(
   "      downloadBlob(\n        await createSvgBlob(project, layout),\n        projectFileName(project, 'svg'),\n      )\n      setNotice({ type: 'success', text: '可编辑 SVG 已生成。' })\n",
   "      const svgBlob = await createSvgBlob(project, layout)\n      if (isDesktopApp()) {\n        const saved = await desktopSaveExport({\n          fileName: projectFileName(project, 'svg'),\n          extension: 'svg',\n          blob: svgBlob,\n        })\n        if (saved.cancelled) return\n        setNotice({ type: 'success', text: `可编辑 SVG 已保存到 ${saved.path}` })\n      } else {\n        downloadBlob(svgBlob, projectFileName(project, 'svg'))\n        setNotice({ type: 'success', text: '可编辑 SVG 已生成。' })\n      }\n",
   'App.tsx native SVG export',
+)
+// ---- 期刊尺寸预设 / dpi / TIFF 导出 ----
+
+// types.ts：ExportSettings 增加 dpi 与期刊预设。两者都可选，
+// 旧的 .figgrid 与 IndexedDB 工程无需迁移即可继续读取。
+{
+  const typesPath = join(repoDir, 'src', 'types.ts')
+  let types = await readFile(typesPath, 'utf8')
+  types = replaceOnce(
+    types,
+    'export interface ExportSettings {\n  width: number\n}\n',
+    'export interface ExportSettings {\n  width: number\n  /** 写入 PNG/TIFF 的物理分辨率；缺省视为 300。 */\n  dpi?: number\n  /** 选中的期刊图幅预设 id，仅用于界面回显。 */\n  journalPreset?: string\n}\n',
+    'types.ts export settings dpi',
+  )
+  await writeFile(typesPath, types)
+}
+
+// project.ts：新建工程带上默认 dpi
+{
+  const projectPath = join(repoDir, 'src', 'lib', 'project.ts')
+  let source = await readFile(projectPath, 'utf8')
+  source = replaceOnce(
+    source,
+    "    exportSettings: { width: 3000 },\n",
+    "    exportSettings: { width: 3000, dpi: 300 },\n",
+    'project.ts default dpi',
+  )
+  await writeFile(projectPath, source)
+}
+
+// InspectorPanel：期刊预设 + dpi + TIFF 按钮
+{
+  const inspectorPath = join(repoDir, 'src', 'components', 'InspectorPanel.tsx')
+  let inspector = await readFile(inspectorPath, 'utf8')
+  inspector = replaceOnce(
+    inspector,
+    "import { EXPORT_WIDTH_PRESETS } from '../constants'\n",
+    "import { EXPORT_WIDTH_PRESETS } from '../constants'\nimport {\n  DEFAULT_DPI,\n  DPI_PRESETS,\n  JOURNAL_PRESETS,\n  clampDpi,\n  describePhysicalSize,\n  mmToPixels,\n} from '../lib/journal-presets'\n",
+    'InspectorPanel journal preset import',
+  )
+  inspector = replaceOnce(
+    inspector,
+    "  onExportPng: () => void\n  onExportSvg: () => void\n",
+    "  onExportPng: () => void\n  onExportSvg: () => void\n  onExportTiff: () => void\n",
+    'InspectorPanel tiff prop type',
+  )
+  inspector = replaceOnce(
+    inspector,
+    "  onExportPng,\n  onExportSvg,\n",
+    "  onExportPng,\n  onExportSvg,\n  onExportTiff,\n",
+    'InspectorPanel tiff prop destructure',
+  )
+  inspector = replaceOnce(
+    inspector,
+    '        <div className="preset-row">\n          {EXPORT_WIDTH_PRESETS.map((width) => (\n',
+    `        <label className="select-field">
+          <span>期刊图幅</span>
+          <select
+            value={exportSettings.journalPreset ?? ''}
+            onChange={(event) => {
+              const id = event.target.value
+              if (!id) {
+                onExportChange({ journalPreset: undefined })
+                return
+              }
+              const preset = JOURNAL_PRESETS.find((item) => item.id === id)
+              if (!preset) return
+              onExportChange({
+                journalPreset: id,
+                width: mmToPixels(preset.widthMm, exportSettings.dpi ?? DEFAULT_DPI),
+              })
+            }}
+          >
+            <option value="">自定义</option>
+            {JOURNAL_PRESETS.map((preset) => (
+              <option value={preset.id} key={preset.id}>
+                {preset.journal} · {preset.column}（{preset.widthMm} mm）
+              </option>
+            ))}
+          </select>
+          <small>数值取自各刊公开指南，投稿前请以目标期刊当期规范为准。</small>
+        </label>
+        <div className="preset-row">
+          {DPI_PRESETS.map((dpi) => (
+            <button
+              type="button"
+              className={(exportSettings.dpi ?? DEFAULT_DPI) === dpi ? 'is-active' : ''}
+              onClick={() => {
+                const preset = JOURNAL_PRESETS.find(
+                  (item) => item.id === exportSettings.journalPreset,
+                )
+                onExportChange({
+                  dpi,
+                  ...(preset ? { width: mmToPixels(preset.widthMm, dpi) } : {}),
+                })
+              }}
+              key={\`dpi-\${dpi}\`}
+            >
+              {dpi} dpi
+            </button>
+          ))}
+        </div>
+        <div className="preset-row">
+          {EXPORT_WIDTH_PRESETS.map((width) => (
+`,
+    'InspectorPanel journal + dpi controls',
+  )
+  inspector = replaceOnce(
+    inspector,
+    "          <small>500–10000 px</small>\n        </label>\n",
+    `          <small>500–10000 px</small>
+        </label>
+        {canExport ? (
+          <p className="export-physical-size">
+            {describePhysicalSize(
+              exportSettings.width,
+              estimatedHeight,
+              clampDpi(exportSettings.dpi ?? DEFAULT_DPI),
+            )}
+          </p>
+        ) : null}
+`,
+    'InspectorPanel physical size readout',
+  )
+  await writeFile(inspectorPath, inspector)
+}
+// InspectorPanel：TIFF 按钮
+{
+  const inspectorPath = join(repoDir, 'src', 'components', 'InspectorPanel.tsx')
+  let inspector = await readFile(inspectorPath, 'utf8')
+  inspector = replaceOnce(
+    inspector,
+    "          {busyAction === 'svg' ? '正在生成 SVG…' : '导出可编辑 SVG'}\n        </button>\n      </CollapsibleSection>\n",
+    `          {busyAction === 'svg' ? '正在生成 SVG…' : '导出可编辑 SVG'}
+        </button>
+        <button
+          type="button"
+          className="secondary-button export-button"
+          onClick={onExportTiff}
+          disabled={!canExport || busyAction !== null}
+        >
+          {busyAction === 'tiff' ? '正在生成 TIFF…' : '导出 TIFF（投稿用）'}
+        </button>
+      </CollapsibleSection>
+`,
+    'InspectorPanel tiff button',
+  )
+  await writeFile(inspectorPath, inspector)
+}
+
+// App.tsx：PNG 带 dpi、新增 TIFF 导出、把 .figgrid 拖进窗口即可打开
+app = replaceOnce(
+  app,
+  "import { createPngBlob, createSvgBlob, downloadBlob } from './lib/export'\n",
+  "import { createPngBlob, createSvgBlob, downloadBlob } from './lib/export'\nimport {\n  createPngBlobWithDpi,\n  createTiffBlob,\n} from './lib/export-formats'\nimport { DEFAULT_DPI, clampDpi } from './lib/journal-presets'\n",
+  'App.tsx export-formats import',
+)
+app = replaceOnce(
+  app,
+  "      const blob = await createPngBlob(\n        project,\n        layout,\n        project.exportSettings.width,\n      )\n",
+  "      const blob = await createPngBlobWithDpi(\n        project,\n        layout,\n        project.exportSettings.width,\n        clampDpi(project.exportSettings.dpi ?? DEFAULT_DPI),\n      )\n",
+  'App.tsx png with dpi',
+)
+// TIFF 导出函数，紧跟在 exportSvg 之后
+app = replaceOnce(
+  app,
+  "  const saveProjectFile = async () => {\n",
+  `  const exportTiff = async () => {
+    const layout = requireSolved()
+    if (!layout) return
+    setBusyAction('tiff')
+    try {
+      await folderBackup.backupNow()
+      const blob = await createTiffBlob(
+        project,
+        layout,
+        project.exportSettings.width,
+        clampDpi(project.exportSettings.dpi ?? DEFAULT_DPI),
+      )
+      if (isDesktopApp()) {
+        const saved = await desktopSaveExport({
+          fileName: projectFileName(project, 'tif'),
+          extension: 'tif',
+          blob,
+        })
+        if (saved.cancelled) return
+        setNotice({ type: 'success', text: \`TIFF 已保存到 \${saved.path}\` })
+      } else {
+        downloadBlob(blob, projectFileName(project, 'tif'))
+        setNotice({ type: 'success', text: 'TIFF 已生成。' })
+      }
+    } catch (error) {
+      setNotice({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'TIFF 导出失败。',
+      })
+    } finally {
+      setBusyAction(null)
+    }
+  }
+
+  const saveProjectFile = async () => {
+`,
+  'App.tsx tiff export function',
+)
+app = replaceOnce(
+  app,
+  "          onExportSvg={() => void exportSvg()}\n",
+  "          onExportSvg={() => void exportSvg()}\n          onExportTiff={() => void exportTiff()}\n",
+  'App.tsx tiff callback wiring',
+)
+// 双击 .figgrid 打开 + 把 .figgrid 拖到窗口打开
+app = replaceOnce(
+  app,
+  "  desktopSaveExport,\n  desktopSaveFiggrid,\n",
+  "  desktopSaveExport,\n  desktopSaveFiggrid,\n  desktopTakeLaunchFile,\n",
+  'App.tsx launch file import',
+)
+app = replaceOnce(
+  app,
+  "  const saveProjectFile = async () => {\n",
+  `  // 打开一个已解析好的 .figgrid：桌面端与浏览器端共用的收口
+  // linked 非空表示文件来自磁盘、带稳定 projectId 与 key，必须沿用既有关联逻辑；
+  // 否则保存时会弹"另存为"而不是写回原文件，且同一文件重复打开会不断产生重复工程。
+  const adoptRestoredProject = useCallback(
+    async (
+      restored: FigureProjectV2,
+      linked?: { projectId: string | null; key: string | null },
+    ) => {
+      const copied = copyProjectAsNew(restored)
+      const imported = linked?.projectId ? { ...copied, id: linked.projectId } : copied
+      await saveProject(imported)
+      if (linked?.key) {
+        await desktopLinkProject(imported.id, linked.key, imported.title)
+      }
+      await setLastOpenProjectId(imported.id)
+      onOpenProject(imported.id)
+      setNotice({ type: 'success', text: \\\`已打开「\\\${imported.title}」。\\\` })
+    },
+    [onOpenProject, setNotice],
+  )
+
+  // 双击 .figgrid 或"打开方式"启动：冷启动时取一次，
+  // 窗口重新获得焦点时再取一次（覆盖程序已在运行时又双击文件的情况）
+  useEffect(() => {
+    if (!isDesktopApp()) return
+    let cancelled = false
+    const drain = async () => {
+      let restored: FigureProjectV2 | null = null
+      try {
+        const picked = await desktopTakeLaunchFile()
+        if (cancelled || !picked) return
+        restored = await readFiggridBundle(picked.file)
+        if (cancelled) return
+        await adoptRestoredProject(restored, {
+          projectId: picked.projectId,
+          key: picked.key,
+        })
+      } catch (error) {
+        if (!cancelled) {
+          setNotice({
+            type: 'error',
+            text: error instanceof Error ? error.message : '打开工程文件失败。',
+          })
+        }
+      } finally {
+        // 不释放会让每次打开都泄漏一批 blob URL
+        restored?.assets.forEach((asset) => URL.revokeObjectURL(asset.previewUrl))
+      }
+    }
+    void drain()
+    window.addEventListener('focus', drain)
+    return () => {
+      cancelled = true
+      window.removeEventListener('focus', drain)
+    }
+  }, [adoptRestoredProject, setNotice])
+
+  const saveProjectFile = async () => {
+`,
+  'App.tsx launch file handling',
+)
+// 拖 .figgrid 到窗口任意位置即可打开
+app = replaceOnce(
+  app,
+  '    <div className="app-shell">\n',
+  `    <div
+      className="app-shell"
+      onDragOver={(event) => {
+        if (
+          Array.from(event.dataTransfer.items).some(
+            (item) => item.kind === 'file',
+          )
+        ) {
+          event.preventDefault()
+        }
+      }}
+      onDrop={(event) => {
+        const file = Array.from(event.dataTransfer.files).find((item) =>
+          item.name.toLowerCase().endsWith('.figgrid'),
+        )
+        // 只拦截 .figgrid；图片仍旧交给左侧素材面板自己的 drop 处理
+        if (!file) return
+        event.preventDefault()
+        void (async () => {
+          let restored: FigureProjectV2 | null = null
+          try {
+            await folderBackup.backupNow()
+            restored = await readFiggridBundle(file)
+            // 拖进来的只是普通文件，没有磁盘关联信息，按新工程导入
+            await adoptRestoredProject(restored)
+          } catch (error) {
+            setNotice({
+              type: 'error',
+              text: error instanceof Error ? error.message : '打开工程文件失败。',
+            })
+          } finally {
+            restored?.assets.forEach((asset) =>
+              URL.revokeObjectURL(asset.previewUrl),
+            )
+          }
+        })()
+      }}
+    >
+`,
+  'App.tsx figgrid drop on window',
+)
+// PPTX 导出：可在 PowerPoint 中继续编辑
+{
+  const inspectorPath = join(repoDir, 'src', 'components', 'InspectorPanel.tsx')
+  let inspector = await readFile(inspectorPath, 'utf8')
+  inspector = replaceOnce(
+    inspector,
+    "  onExportTiff: () => void\n",
+    "  onExportTiff: () => void\n  onExportPptx: () => void\n",
+    'InspectorPanel pptx prop type',
+  )
+  inspector = replaceOnce(
+    inspector,
+    "  onExportTiff,\n",
+    "  onExportTiff,\n  onExportPptx,\n",
+    'InspectorPanel pptx prop destructure',
+  )
+  inspector = replaceOnce(
+    inspector,
+    "          {busyAction === 'tiff' ? '正在生成 TIFF…' : '导出 TIFF（投稿用）'}\n        </button>\n",
+    `          {busyAction === 'tiff' ? '正在生成 TIFF…' : '导出 TIFF（投稿用）'}
+        </button>
+        <button
+          type="button"
+          className="secondary-button export-button"
+          onClick={onExportPptx}
+          disabled={!canExport || busyAction !== null}
+        >
+          {busyAction === 'pptx' ? '正在生成 PPTX…' : '导出 PPTX（可再编辑）'}
+        </button>
+`,
+    'InspectorPanel pptx button',
+  )
+  await writeFile(inspectorPath, inspector)
+}
+
+app = replaceOnce(
+  app,
+  "import { DEFAULT_DPI, clampDpi } from './lib/journal-presets'\n",
+  "import { DEFAULT_DPI, clampDpi } from './lib/journal-presets'\nimport { createPptxBlob } from './lib/export-pptx'\n",
+  'App.tsx pptx import',
+)
+app = replaceOnce(
+  app,
+  "  const saveProjectFile = async () => {\n",
+  `  const exportPptx = async () => {
+    const layout = requireSolved()
+    if (!layout) return
+    setBusyAction('pptx')
+    try {
+      await folderBackup.backupNow()
+      const blob = await createPptxBlob(
+        project,
+        layout,
+        project.exportSettings.width,
+        clampDpi(project.exportSettings.dpi ?? DEFAULT_DPI),
+      )
+      if (isDesktopApp()) {
+        const saved = await desktopSaveExport({
+          fileName: projectFileName(project, 'pptx'),
+          extension: 'pptx',
+          blob,
+        })
+        if (saved.cancelled) return
+        setNotice({ type: 'success', text: \\\`PPTX 已保存到 \\\${saved.path}\\\` })
+      } else {
+        downloadBlob(blob, projectFileName(project, 'pptx'))
+        setNotice({ type: 'success', text: 'PPTX 已生成。' })
+      }
+    } catch (error) {
+      setNotice({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'PPTX 导出失败。',
+      })
+    } finally {
+      setBusyAction(null)
+    }
+  }
+
+  const saveProjectFile = async () => {
+`,
+  'App.tsx pptx export function',
+)
+app = replaceOnce(
+  app,
+  "          onExportTiff={() => void exportTiff()}\n",
+  "          onExportTiff={() => void exportTiff()}\n          onExportPptx={() => void exportPptx()}\n",
+  'App.tsx pptx callback wiring',
 )
 await writeFile(appPath, app)
 

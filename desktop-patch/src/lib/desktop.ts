@@ -183,6 +183,16 @@ export async function desktopAutosaveFiggrid(options: {
   })
 }
 
+/**
+ * 取走双击 .figgrid 启动时待打开的文件。
+ * 挂载时与窗口获得焦点时各调用一次，即可覆盖"冷启动"与"已运行时再双击"两种情况。
+ * 没有待处理文件时返回 null，这是正常启动的常见情况。
+ */
+export async function desktopTakeLaunchFile(): Promise<DesktopPickedProject | null> {
+  const payload = await invoke<Uint8Array | ArrayBuffer>('desktop_take_launch_file')
+  return decodeProjectEnvelope(asUint8Array(payload))
+}
+
 export async function desktopSaveExport(options: {
   fileName: string
   extension: 'png' | 'svg'

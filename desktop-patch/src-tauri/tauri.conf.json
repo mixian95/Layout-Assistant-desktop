@@ -52,6 +52,17 @@
       "icons/128x128.png",
       "icons/128x128@2x.png",
       "icons/icon.ico"
+    ],
+    "fileAssociations": [
+      {
+        "ext": [
+          "figgrid"
+        ],
+        "name": "Figgrid 工程",
+        "description": "论文图片排版助手工程文件",
+        "mimeType": "application/x-figgrid",
+        "role": "Editor"
+      }
     ]
   }
 }

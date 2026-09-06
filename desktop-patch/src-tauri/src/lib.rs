@@ -20,6 +20,9 @@ const AUTOSAVE_RETENTION: Duration = Duration::from_secs(90 * 24 * 60 * 60);
 
 struct DesktopIoState {
     autosave_lock: Mutex<()>,
+    /// 双击 .figgrid 或"打开方式"启动时传入的文件路径。
+    /// 前端在挂载后与每次窗口获得焦点时来取走，取走即清空。
+    pending_open: Mutex<Option<PathBuf>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1458,6 +1461,66 @@ async fn desktop_open_recent_figgrid(
     Ok(tauri::ipc::Response::new(envelope))
 }
 
+/// 从命令行参数里挑出第一个存在的 .figgrid 路径。
+///
+/// 只接受真实存在的普通文件，避免把任意参数当成路径。
+fn figgrid_from_args<I, S>(args: I) -> Option<PathBuf>
+where
+    I: IntoIterator<Item = S>,
+    S: AsRef<str>,
+{
+    for arg in args {
+        let raw = arg.as_ref();
+        if raw.starts_with('-') {
+            continue;
+        }
+        let path = PathBuf::from(raw);
+        let is_figgrid = path
+            .extension()
+            .and_then(|value| value.to_str())
+            .map(|value| value.eq_ignore_ascii_case("figgrid"))
+            .unwrap_or(false);
+        if is_figgrid && path.is_file() {
+            return Some(path);
+        }
+    }
+    None
+}
+
+fn first_launch_file() -> Option<PathBuf> {
+    figgrid_from_args(std::env::args().skip(1))
+}
+
+/// 取走并清空待打开的启动文件（双击 .figgrid / "打开方式" / 拖到程序图标）。
+///
+/// 完全复用 desktop_pick_figgrid 的信封与最近工程逻辑，因此打开来的工程
+/// 同样拥有稳定 projectId 与磁盘指纹，后续保存会直接写回原文件。
+///
+/// 没有待处理文件时返回取消信封，这是正常启动的常见情况。
+#[tauri::command]
+async fn desktop_take_launch_file(
+    app: tauri::AppHandle,
+) -> Result<tauri::ipc::Response, String> {
+    let taken = {
+        let state = app.state::<DesktopIoState>();
+        let mut slot = state
+            .pending_open
+            .lock()
+            .map_err(|_| "无法访问启动文件状态。".to_string())?;
+        slot.take()
+    };
+    let Some(path) = taken else {
+        return Ok(tauri::ipc::Response::new(cancel_envelope()));
+    };
+    if !path.is_file() {
+        return Ok(tauri::ipc::Response::new(cancel_envelope()));
+    }
+    let item = upsert_recent(&app, &path, file_stem_title(&path), None)?;
+    let (envelope, fingerprint) = read_figgrid_envelope(&path, &item)?;
+    update_recent_fingerprint(&app, &path, fingerprint)?;
+    Ok(tauri::ipc::Response::new(envelope))
+}
+
 /// 把导出的位图/矢量图通过系统原生"另存为"对话框写入磁盘。
 ///
 /// 为什么需要：Tauri 的 WebView 不支持 `<a download>` + blob: URL 这种
@@ -1478,6 +1541,8 @@ fn desktop_save_export(
     let (label, extension) = match extension.as_str() {
         "png" => ("PNG 图片", "png"),
         "svg" => ("SVG 矢量图", "svg"),
+        "tif" | "tiff" => ("TIFF 图片", "tif"),
+        "pptx" => ("PowerPoint 演示文稿", "pptx"),
         _ => return Err("不支持的导出格式。".to_string()),
     };
 
@@ -1882,13 +1947,23 @@ fn desktop_list_recent_projects(app: tauri::AppHandle) -> Result<Vec<RecentProje
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+        .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
+            // 已有实例时，第二次启动带来的 .figgrid 路径要交给现有窗口，
+            // 否则双击文件只会把旧窗口调到前台而不打开新文件。
+            if let Some(path) = figgrid_from_args(args.iter().skip(1)) {
+                if let Some(state) = app.try_state::<DesktopIoState>() {
+                    if let Ok(mut slot) = state.pending_open.lock() {
+                        *slot = Some(path);
+                    }
+                }
+            }
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.set_focus();
             }
         }))
         .manage(DesktopIoState {
             autosave_lock: Mutex::new(()),
+            pending_open: Mutex::new(first_launch_file()),
         })
         .setup(|app| {
             // 窗口尺寸用 LogicalSize（等同 CSS 像素）显式设定。
@@ -1912,6 +1987,7 @@ pub fn run() {
             desktop_open_recent_figgrid,
             desktop_save_figgrid,
             desktop_save_export,
+            desktop_take_launch_file,
             desktop_autosave_figgrid,
             desktop_list_autosaves,
             desktop_read_autosave,
