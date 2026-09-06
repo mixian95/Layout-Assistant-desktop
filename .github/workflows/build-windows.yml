@@ -60,6 +60,11 @@ jobs:
         shell: pwsh
         run: npm run desktop:doctor
 
+      - name: Generate and seal lockfiles
+        working-directory: app
+        shell: pwsh
+        run: npm run desktop:lock
+
       - name: Verify lockfiles
         working-directory: app
         shell: pwsh
