@@ -106,6 +106,13 @@ jobs:
         shell: pwsh
         run: npm run build
 
+      # 便携网页版：产出可直接双击 index.html 使用的一套文件，无需安装、无需服务器。
+      # 工程不保留（浏览器禁止本地文件页面使用数据库），关闭即清空。
+      - name: Build portable web version
+        working-directory: app
+        shell: pwsh
+        run: npm run portable:build
+
       - name: Build NSIS installer
         working-directory: app
         shell: pwsh
@@ -115,6 +122,22 @@ jobs:
         working-directory: app
         shell: pwsh
         run: node scripts/desktop-verify-build.mjs
+
+      # 绿色版：Tauri 在打安装包之前就产出了一个独立 exe。
+      # 双击即用、无需安装，功能与安装版完全相同（含保存工程与自动保存）。
+      # Windows 10/11 自带其所需的 WebView2 运行时。
+      - name: Collect portable executable
+        shell: pwsh
+        run: |
+          $source = ".\app\src-tauri\target\release\layout-assistant-desktop.exe"
+          if (-not (Test-Path $source)) { throw "portable executable not found at $source" }
+          New-Item -ItemType Directory -Force -Path .\portable-exe | Out-Null
+          $target = ".\portable-exe\论文图片排版助手-绿色版.exe"
+          Copy-Item $source $target -Force
+          $hash = (Get-FileHash -Algorithm SHA256 $target).Hash.ToLowerInvariant()
+          "$hash  论文图片排版助手-绿色版.exe" | Set-Content -Encoding ascii "$target.sha256"
+          Write-Host "绿色版大小: $([math]::Round((Get-Item $target).Length / 1MB, 1)) MB"
+          Copy-Item ".\\desktop-patch\\使用说明.md" ".\\portable-exe\\..\\使用说明.md" -Force
 
       - name: Write installer SHA-256 file
         shell: pwsh
@@ -148,4 +171,7 @@ jobs:
             app/src-tauri/Cargo.lock
             app/desktop-lockfiles.sha256.json
             app/desktop-baseline.json
+            app/dist-portable/**
+            portable-exe/**
+            使用说明.md
             resolved-upstream.json
