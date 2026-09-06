@@ -160,6 +160,7 @@ for (const relative of [
   'scripts/desktop-lock.mjs',
   'scripts/desktop-lock-check.mjs',
   'scripts/desktop-make-icons.mjs',
+  'scripts/desktop-syntax-check.mjs',
   'src/lib/journal-presets.ts',
   'src/lib/raster-format.ts',
   'src/lib/export-formats.ts',
@@ -531,7 +532,7 @@ app = replaceOnce(
       }
       await setLastOpenProjectId(imported.id)
       onOpenProject(imported.id)
-      setNotice({ type: 'success', text: \\\`已打开「\\\${imported.title}」。\\\` })
+      setNotice({ type: 'success', text: \`已打开「\${imported.title}」。\` })
     },
     [onOpenProject, setNotice],
   )
@@ -684,7 +685,7 @@ app = replaceOnce(
           blob,
         })
         if (saved.cancelled) return
-        setNotice({ type: 'success', text: \\\`PPTX 已保存到 \\\${saved.path}\\\` })
+        setNotice({ type: 'success', text: \`PPTX 已保存到 \${saved.path}\` })
       } else {
         downloadBlob(blob, projectFileName(project, 'pptx'))
         setNotice({ type: 'success', text: 'PPTX 已生成。' })
@@ -798,6 +799,17 @@ await writeFile(stylesPath, styles)
   )
   const written = generateIcons(join(repoDir, 'src-tauri', 'icons'))
   if (written.length) console.log(`Generated app icons: ${written.join(', ')}`)
+}
+
+// 立刻解析一遍生成的源码。模板字符串拼代码时转义写错一层，
+// 文件看起来正常但 esbuild 会在构建阶段才报错，白烧一轮 CI。
+{
+  const { execFileSync } = await import('node:child_process')
+  execFileSync(
+    process.execPath,
+    [join(repoDir, 'scripts', 'desktop-syntax-check.mjs'), repoDir],
+    { stdio: 'inherit' },
+  )
 }
 
 console.log('Desktop phase-7 cumulative patch applied.')

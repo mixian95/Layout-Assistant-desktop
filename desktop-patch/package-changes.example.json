@@ -5,6 +5,7 @@
     "desktop:build": "tauri build",
     "desktop:doctor": "node scripts/desktop-doctor.mjs",
     "desktop:verify": "node scripts/desktop-verify.mjs",
+    "desktop:syntax": "node scripts/desktop-syntax-check.mjs .",
     "desktop:lock": "node scripts/desktop-lock.mjs",
     "desktop:lock:check": "node scripts/desktop-lock-check.mjs",
     "desktop:test:rust": "cargo test --manifest-path src-tauri/Cargo.toml --locked --lib",
