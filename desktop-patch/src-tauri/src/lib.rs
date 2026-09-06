@@ -440,6 +440,18 @@ fn ensure_figgrid_extension(mut path: PathBuf) -> PathBuf {
     path
 }
 
+fn ensure_export_extension(mut path: PathBuf, extension: &str) -> PathBuf {
+    let matches = path
+        .extension()
+        .and_then(|value| value.to_str())
+        .map(|value| value.eq_ignore_ascii_case(extension))
+        .unwrap_or(false);
+    if !matches {
+        path.set_extension(extension);
+    }
+    path
+}
+
 fn atomic_sidecar(path: &Path, suffix: &str) -> Result<PathBuf, String> {
     let parent = path
         .parent()
@@ -1446,6 +1458,57 @@ async fn desktop_open_recent_figgrid(
     Ok(tauri::ipc::Response::new(envelope))
 }
 
+/// 把导出的位图/矢量图通过系统原生"另存为"对话框写入磁盘。
+///
+/// 为什么需要：Tauri 的 WebView 不支持 `<a download>` + blob: URL 这种
+/// 浏览器下载方式（tauri-apps/wry#349）。原版 downloadBlob() 在桌面端
+/// 要么什么都不发生，要么静默落进"下载"文件夹，用户看不到文件去了哪里。
+///
+/// 扩展名做白名单，避免前端被注入后写出可执行文件。
+#[tauri::command(async)]
+fn desktop_save_export(
+    app: tauri::AppHandle,
+    request: tauri::ipc::Request<'_>,
+) -> Result<SaveResult, String> {
+    let bytes = raw_body(&request)?;
+    ensure_body_size(bytes)?;
+    let file_name = decoded_header(&request, "x-file-name")?;
+    let extension = decoded_header(&request, "x-file-extension")?;
+
+    let (label, extension) = match extension.as_str() {
+        "png" => ("PNG 图片", "png"),
+        "svg" => ("SVG 矢量图", "svg"),
+        _ => return Err("不支持的导出格式。".to_string()),
+    };
+
+    let selected = app
+        .dialog()
+        .file()
+        .set_title("导出图片")
+        .set_file_name(&file_name)
+        .add_filter(label, &[extension])
+        .blocking_save_file();
+
+    let Some(selected) = selected else {
+        return Ok(SaveResult {
+            cancelled: true,
+            path: None,
+        });
+    };
+    let path = ensure_export_extension(
+        selected
+            .into_path()
+            .map_err(|error| format!("无法读取导出路径：{error}"))?,
+        extension,
+    );
+
+    atomic_write(&path, bytes)?;
+    Ok(SaveResult {
+        cancelled: false,
+        path: Some(path_string(&path)),
+    })
+}
+
 #[tauri::command(async)]
 fn desktop_save_figgrid(
     app: tauri::AppHandle,
@@ -1828,6 +1891,15 @@ pub fn run() {
             autosave_lock: Mutex::new(()),
         })
         .setup(|app| {
+            // 窗口尺寸用 LogicalSize（等同 CSS 像素）显式设定。
+            // tauri.conf.json 里的 width/height 在 Windows 高 DPI（4K + 缩放）
+            // 下语义不确定，会让 CSS 视口掉到 1024px 以下，从而触发前端的
+            // @media (max-width: 1023px) 窄屏拦截页。
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.set_min_size(Some(tauri::LogicalSize::new(1024.0, 700.0)));
+                let _ = window.set_size(tauri::LogicalSize::new(1440.0, 940.0));
+                let _ = window.center();
+            }
             if let Ok(data_dir) = app_data_dir(app.handle()) {
                 let _ = recover_atomic_tree(&data_dir);
             }
@@ -1839,6 +1911,7 @@ pub fn run() {
             desktop_pick_figgrid,
             desktop_open_recent_figgrid,
             desktop_save_figgrid,
+            desktop_save_export,
             desktop_autosave_figgrid,
             desktop_list_autosaves,
             desktop_read_autosave,

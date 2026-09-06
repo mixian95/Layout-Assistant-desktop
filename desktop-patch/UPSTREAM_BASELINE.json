@@ -2,8 +2,8 @@
   "schema": 4,
   "repository": "https://github.com/Resky0/layout-assistant",
   "version": "0.6.0",
-  "commit": "0b046eef58663e6e2fe75a623a6a544b46ce59e5",
-  "tree": "cd65f78ae752baed32102696d5f7413c77309e78",
+  "commit": null,
+  "tree": null,
   "sourceRef": "首次成功构建后，把 CI 打印的 commit/tree 填入上面两个字段即可锁定",
   "strategy": "commit 已填时严格验证该 commit 的整树 hash 与下列文件；未填时自举解析并记录",
   "exactFiles": {

@@ -183,6 +183,20 @@ export async function desktopAutosaveFiggrid(options: {
   })
 }
 
+export async function desktopSaveExport(options: {
+  fileName: string
+  extension: 'png' | 'svg'
+  blob: Blob | Uint8Array
+}): Promise<DesktopSaveResult> {
+  const bytes = await rawBytes(options.blob)
+  return invoke<DesktopSaveResult>('desktop_save_export', bytes, {
+    headers: {
+      'x-file-name': encodeHeader(options.fileName),
+      'x-file-extension': encodeHeader(options.extension),
+    },
+  })
+}
+
 export async function desktopLinkProject(
   projectId: string,
   key: string,

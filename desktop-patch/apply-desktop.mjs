@@ -193,7 +193,7 @@ app = replaceOnce(
 app = replaceOnce(
   app,
   "  desktopPickFiggrid,\n  desktopSaveFiggrid,\n",
-  "  desktopPickFiggrid,\n  desktopProjectRevision,\n  desktopSaveFiggrid,\n",
+  "  desktopPickFiggrid,\n  desktopProjectRevision,\n  desktopSaveExport,\n  desktopSaveFiggrid,\n",
   'App.tsx desktop revision import',
 )
 if (!app.includes('const desktopAutosave = useDesktopAutosave(project, hydrated)')) {
@@ -275,6 +275,21 @@ if (!app.includes('items.some((item) => item.needsRecovery)')) {
     'App.tsx startup recovery redirect',
   )
 }
+// 桌面端用系统原生"另存为"替代浏览器下载。
+// Tauri WebView 不支持 <a download> + blob:（wry#349），原版在桌面端
+// 会静默失败或落进"下载"文件夹，用户完全看不到文件去了哪。
+app = replaceOnce(
+  app,
+  "      downloadBlob(blob, projectFileName(project, 'png'))\n      setNotice({ type: 'success', text: '高清 PNG 已生成。' })\n",
+  "      if (isDesktopApp()) {\n        const saved = await desktopSaveExport({\n          fileName: projectFileName(project, 'png'),\n          extension: 'png',\n          blob,\n        })\n        if (saved.cancelled) return\n        setNotice({ type: 'success', text: `高清 PNG 已保存到 ${saved.path}` })\n      } else {\n        downloadBlob(blob, projectFileName(project, 'png'))\n        setNotice({ type: 'success', text: '高清 PNG 已生成。' })\n      }\n",
+  'App.tsx native PNG export',
+)
+app = replaceOnce(
+  app,
+  "      downloadBlob(\n        await createSvgBlob(project, layout),\n        projectFileName(project, 'svg'),\n      )\n      setNotice({ type: 'success', text: '可编辑 SVG 已生成。' })\n",
+  "      const svgBlob = await createSvgBlob(project, layout)\n      if (isDesktopApp()) {\n        const saved = await desktopSaveExport({\n          fileName: projectFileName(project, 'svg'),\n          extension: 'svg',\n          blob: svgBlob,\n        })\n        if (saved.cancelled) return\n        setNotice({ type: 'success', text: `可编辑 SVG 已保存到 ${saved.path}` })\n      } else {\n        downloadBlob(svgBlob, projectFileName(project, 'svg'))\n        setNotice({ type: 'success', text: '可编辑 SVG 已生成。' })\n      }\n",
+  'App.tsx native SVG export',
+)
 await writeFile(appPath, app)
 
 const projectFilePath = join(repoDir, 'src/lib/project-file.ts')

@@ -2,7 +2,7 @@
 0ff9c37c077b1baef15d2fa2ed3e5ef13c288595486022b2278dc0202d934aea  ./LOCKFILE_STATUS.md
 bc3172356bd898dd1d4daed1ca8384ee1bd33aa3fcc36f80a214f8b781c6a030  ./UPSTREAM_BASELINE.json
 62979e3a55fc1845d25fe836a0c67d8e02b519c7789813632b68fe6fe7f7249f  ./WINDOWS_VALIDATION.md
-80a41ab32b1071389f9e3a8a8c1ff88b06b85511dc0935e66edbd3c65156a2f2  ./apply-desktop.mjs
+3e1f8ac669b5586ef647b6317c1e03496644fd2513d18b8054c309639dd2c920  ./apply-desktop.mjs
 10c7395c71e897e0fc75a5ce42e796ece17b174e52c70e1b7be55f77a475dcdf  ./package-changes.example.json
 b65791647f69fbf961d62391704998e83cb812cd438629b7a136a68021161dd0  ./scripts/desktop-doctor.mjs
 516dead67ab232ce59a2685d031f8ead33b35a7b5a5fc2120dccdda8bbbcde9f  ./scripts/desktop-lock-check.mjs
@@ -13,11 +13,11 @@ a930566fafcd756c7eef65fd3380f1b3f0a535dedffb91ba1b286da0d7730662  ./scripts/desk
 e281afc63b4d215d88535ea31c36d622897e385faa23d46e64e65f149eef46d6  ./src-tauri/Cargo.toml
 487059eaf8a947b80f20a9aacac038a5047b2ad69d2401b827376c67d6fe847f  ./src-tauri/build.rs
 55a4878d560c29afce138fc6b6f145e46d09c670550a9fc8127b6aaf5c103196  ./src-tauri/capabilities/default.json
-c2166ddf98003e841a29c97ad26d1af9627a08384cc54781c343bdd83f75bbf4  ./src-tauri/src/lib.rs
+2d3742a41873fcf84f59af963122bf99c6a49c9f2d7fe9b8233f9e3d5445a7c2  ./src-tauri/src/lib.rs
 0ad487157ac4c8e5fc2aeb89208e46e85057410363bbe570cf5ab385669fc184  ./src-tauri/src/main.rs
-d94adb73b1f71aeea7ec89cc6d2cf5c8f09ea1ef1819020e8e47eab249095122  ./src-tauri/tauri.conf.json
+93f2b6c9f487b901f1b769097713a08899af4f0a97f8d71a2005be686378d26a  ./src-tauri/tauri.conf.json
 154df583410de87353c8394e002f2d59ced8361bdef50ca5c262accfa5582db2  ./src/components/DesktopRecentProjects.tsx
 38877339cdd38597e850a032bb5cc59c16891d1d3aae845a51a01eb024a39940  ./src/components/DesktopRecoveryPanel.tsx
 8268173c8839c70e6e2573b3faabc640b397e91dbca830d724387267f4719ba2  ./src/hooks/useDesktopAutosave.ts
-c89555d93b32a2f8731a32b8fc1f50b472dd5a3e9e72e67ab439a5fae04c5266  ./src/lib/desktop.ts
+7680ff28e90711e6e1f15208fcfaad0872895dc0037c862397fcfd334e1c0cd6  ./src/lib/desktop.ts
 1bc749c46320872d288a4ab50705ed726331dd721d3722233e12fbf97d80c35b  ./vite.config.desktop.ts
