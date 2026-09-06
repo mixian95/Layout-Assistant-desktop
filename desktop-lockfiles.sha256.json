@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "files": {
+    "package-lock.json": {
+      "sha256": "ebae64bd64211629fc3300051d2192389cd191d0d3be043abc675ec32d01c076",
+      "bytes": 166947
+    },
+    "src-tauri/Cargo.lock": {
+      "sha256": "b6a565ac9fc885961b36c23c3c4be90db8c357ff5721455b3cd7fde5bf0975bf",
+      "bytes": 125174
+    }
+  }
+}
